@@ -1,5 +1,9 @@
 """qPCR RNA dilution calculator for multi-virus formulations.
 
+This module estimates practical RNA dilution and pipetting volumes for one or more
+viruses in a shared sample vial. It is intended for quick planning of multi-virus
+qPCR formulations using stock Ct values and desired target Ct values.
+
 Example:
 python main.py --virus PEDV --target-ct 25 --virus PDCoV --target-ct 17 --final-volume 3000
 """
@@ -8,7 +12,7 @@ from __future__ import annotations
 
 import argparse
 import math
-from typing import Dict, List
+from typing import Dict, List, Optional, Sequence
 
 # Editable configuration section.
 FINAL_VOLUME_UL = 3000.0
@@ -28,8 +32,31 @@ VIRUS_STOCKS: Dict[str, float] = {
 
 
 def _validate_positive_number(name: str, value: float) -> None:
+    """Ensure that a numeric input is present and greater than zero."""
     if value is None or value <= 0:
         raise ValueError(f"{name} must be a positive number")
+
+
+def build_components_from_selection(
+    selected_viruses: Sequence[str],
+    target_cts: Sequence[float],
+    stock_cts: Optional[Dict[str, float]] = None,
+) -> List[Dict[str, object]]:
+    """Build a list of validated components from the selected viruses and target Ct values."""
+    if len(selected_viruses) != len(target_cts):
+        raise ValueError("Each selected virus needs exactly one target Ct")
+    if len(selected_viruses) > 3:
+        raise ValueError("This app supports up to 3 viruses in one sample")
+
+    components: List[Dict[str, object]] = []
+    for virus, target_ct in zip(selected_viruses, target_cts):
+        if virus not in VIRUS_STOCKS:
+            raise ValueError(
+                f"Unknown virus {virus}. Available options: {', '.join(sorted(VIRUS_STOCKS))}"
+            )
+        stock_ct = stock_cts.get(virus, VIRUS_STOCKS[virus]) if stock_cts else VIRUS_STOCKS[virus]
+        components.append({"virus": virus, "target_ct": target_ct, "stock_ct": stock_ct})
+    return components
 
 
 def calculate_component(
@@ -39,7 +66,7 @@ def calculate_component(
     component_count: int = 1,
     min_pipette_volume_ul: float = MIN_PIPETTE_VOLUME_UL,
 ) -> Dict[str, float]:
-    """Calculate a practical dilution and pipetting volumes for one virus component."""
+    """Calculate a practical dilution and pipetting plan for one virus component."""
     _validate_positive_number("stock_ct", stock_ct)
     _validate_positive_number("target_ct", target_ct)
     _validate_positive_number("final_volume_ul", final_volume_ul)
@@ -95,7 +122,7 @@ def calculate_mix(
     components: List[Dict[str, object]],
     final_volume_ul: float = FINAL_VOLUME_UL,
 ) -> Dict[str, object]:
-    """Calculate dilution plans for a multi-virus mix."""
+    """Combine multiple virus components into one shared final vial and compute shared diluent."""
     _validate_positive_number("final_volume_ul", final_volume_ul)
     if not components:
         raise ValueError("At least one virus component is required")
@@ -125,6 +152,7 @@ def calculate_mix(
 
 
 def run_cli() -> None:
+    """Run the calculator from the command line with virus, target Ct, and volume inputs."""
     parser = argparse.ArgumentParser(description="Calculate qPCR RNA dilution volumes")
     parser.add_argument(
         "--virus",
@@ -162,13 +190,7 @@ def run_cli() -> None:
     if len(args.virus) != len(args.target_ct):
         raise ValueError("Each virus needs exactly one target Ct")
 
-    components = []
-    for virus, target_ct in zip(args.virus, args.target_ct):
-        if virus not in VIRUS_STOCKS:
-            raise ValueError(
-                f"Unknown virus {virus}. Available options: {', '.join(sorted(VIRUS_STOCKS))}"
-            )
-        components.append({"virus": virus, "target_ct": target_ct})
+    components = build_components_from_selection(args.virus, args.target_ct)
 
     mix = calculate_mix(components, final_volume_ul=args.final_volume)
     print("Prepared dilution plan:")
