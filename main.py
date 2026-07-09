@@ -25,9 +25,9 @@ MAX_TARGET_CT = 32.0
 MIN_PIPETTE_VOLUME_UL = 2.0
 
 VIRUS_STOCKS: Dict[str, float] = {
-    "PEDV": 22.2,
-    "PDCoV": 21.6,
-    "TGEV": 18.9,
+    "PEDV": 23.3,
+    "PDCoV": 27.95,
+    "TGEV": 20.0,
 }
 
 
@@ -95,8 +95,8 @@ def calculate_component(
             )
         additional_factor += 1
 
-    component_volume_ul = final_volume_ul / component_count
-    rna_volume_ul = component_volume_ul / additional_factor
+    component_volume_ul = final_volume_ul
+    rna_volume_ul = final_volume_ul * STARTING_DILUTION / total_dilution_factor
     diluent_volume_ul = component_volume_ul - rna_volume_ul
 
     if rna_volume_ul < min_pipette_volume_ul:
@@ -109,7 +109,7 @@ def calculate_component(
         "target_ct": target_ct,
         "component_count": component_count,
         "component_volume_ul": component_volume_ul,
-        "total_dilution_factor": int(STARTING_DILUTION * additional_factor),
+        "total_dilution_factor": int(total_dilution_factor),
         "additional_dilution_factor": int(additional_factor),
         "shared_vial_dilution_factor": int(component_count),
         "achieved_ct": achieved_ct,
