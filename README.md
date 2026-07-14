@@ -1,46 +1,52 @@
 # formulation_calculation
 
-A small Python tool for planning multi-virus qPCR formulation dilutions from stock Ct values and desired target Ct values.
+A simple Python program for planning multi-virus qPCR formulation dilutions from stock Ct values and desired target Ct values.
 
-## What it does
+## What the program does
 
-- Calculates a practical dilution plan for one virus component at a time
-- Supports multi-virus mixes in a shared final vial
-- Estimates RNA volume, diluent volume, and the predicted final Ct value
-- Can be used from the command line or through a simple Shiny web interface
+This script helps calculate how much stock virus solution and diluent are needed to prepare a final sample mix for 1, 2, or 3 viruses.
 
-## Files
+For each virus, the program asks for:
+- the virus name
+- the desired Ct value
+- the final sample volume
 
-- main.py: core calculation logic and CLI entry point
-- main_py.py: interactive prompt-based entry point for local Python environments such as PyCharm
-- shiny_main.py: separate Shiny app for interactive use
-- test_main.py: unit tests for the calculator functions
-- test_main_py.py: tests for the prompt-based entry point
+It then calculates:
+- delta Ct
+- dilution factor
+- stock volume to add
+- diluent volume to add
 
-## Run the CLI
+## Hard-coded stock Ct values
 
-```bash
-python main.py --virus PEDV --target-ct 26 --virus PDCoV --target-ct 26 --final-volume 3000
-```
+The program includes the hardcoded ct stock values.
+These values are stored at the top of the script in a single place so they are easy to update.
 
-## Run the interactive PyCharm-friendly version
+## Validation rules
 
-If you want to use the program in a local Python IDE without shell arguments, run:
+The program checks the entered values and refuses invalid input when needed. It enforces:
+- only 1, 2, or 3 viruses are allowed
+- virus names must match the supported list
+- virus names cannot be repeated
+- desired Ct must be at least 2 Ct higher than the stock Ct
+- desired Ct cannot exceed 32
+- dilution cannot be below 8x
+- diluent volume must remain positive
 
-```bash
-python main_py.py
-```
+## How to run it
 
-When you run this script, it will prompt you for:
+This program is designed to be run from an IDE such as PyCharm rather than from the command line.
 
-- each virus name,
-- the target Ct for each virus,
-- and the final volume in uL.
+1. Open the project in PyCharm.
+2. Open [simplified.py](simplified.py).
+3. Run the file with the Python runner.
+4. Enter the requested values in the console.
 
-This version uses the logic from main.py, so you only need to run main_py.py as long as both files are in the same project folder.
+## Notes
 
-## Run the Shiny app
+The calculations use the simple formula:
+- dilution = 10^(delta Ct / 3.3)
+- stock volume = (final volume / dilution) * 4
 
-```bash
-python shiny_main.py
-```
+The stock is assumed to be stored as a 1:4 dilution.
+
